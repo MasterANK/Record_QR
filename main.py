@@ -1,16 +1,17 @@
-#pip install qrcode
 import qrcode
-import pandas as pd
-import os
+from openpyxl import load_workbook
+from openpyxl.drawing.image import Image
+from io import BytesIO
 
-excel_file = "/content/TestData.xlsx"  # CHANGE THIS
-df = pd.read_excel(excel_file)
+excel_path = '/content/TestData.xlsx'
 
-qr_path = "QR_Folder"
-os.mkdir(qr_path)
+# Load the Excel file using openpyxl
+workbook = load_workbook(excel_path)
+sheet = workbook.active
 
-for index, row in df.iterrows():
-    data = ', '.join(map(str, row.values))
+# Iterate over the rows in the sheet
+for index, row in enumerate(sheet.iter_rows(min_row=2, values_only=True)):  # Start from row 2 to skip header
+    url = row[3]  # Assuming URL is in the second column, adjust as necessary
 
     qr = qrcode.QRCode(
         version=1,
@@ -18,13 +19,19 @@ for index, row in df.iterrows():
         box_size=10,
         border=4,
     )
-    qr.add_data(data)
+    qr.add_data(url)
     qr.make(fit=True)
 
+    # Save QR code to a BytesIO object
+    img_stream = BytesIO()
     img = qr.make_image(fill_color="black", back_color="white")
+    img.save(img_stream, format='PNG')
+    img_stream.seek(0)
 
-    img.save(f"{qr_path}/qrcode_row_{index}.png")
+    # Insert the image into the Excel file
+    img = Image(img_stream)
+    img.anchor = f'C{index + 2}'  # Adjust the cell reference as per your need
+    sheet.add_image(img)
 
-    print(f"Data {index} Saved") ## Testing
-
-print("QR codes generated and saved successfully.")
+# Save the updated Excel file
+workbook.save('/content/TestData_with_qr.xlsx')
