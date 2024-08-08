@@ -1,3 +1,4 @@
+#pip install qrcode
 import qrcode
 import pandas as pd
 import os
